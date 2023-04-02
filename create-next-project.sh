@@ -1,0 +1,347 @@
+#!/bin/bash
+
+read -p "Nome do projeto: " project_name
+
+mkdir $project_name
+cd $project_name
+
+
+echo -e "{
+  \"name\": \"$project_name\",
+  \"version\": \"1.0.0\",
+  \"main\": \"index.js\",
+  \"license\": \"MIT\",
+  \"scripts\": {
+    \"dev\": \"next dev\",
+    \"build\": \"next build\",
+    \"start\": \"next start\",
+    \"lint\": \"next lint\"
+  },
+  \"lint-staged\": {
+    \"*.@(ts|tsx|js|jsx)\": [
+      \"eslint --fix\"
+    ]
+  }
+}" > package.json
+
+git init
+touch tsconfig.json
+mkdir public src src/pages src/styles
+
+yarn add next nprogress react react-dom swiper react-icons &&
+yarn add -D @types/nprogress &&
+
+yarn add -D tailwindcss postcss autoprefixer &&
+yarn tailwindcss init -p &&
+
+yarn add -D husky commitizen lint-staged &&
+yarn commitizen init cz-conventional-changelog --yarn --dev --exact &&
+yarn husky install &&
+yarn husky add .husky/prepare-commit-msg "exec < /dev/tty && node_modules/.bin/cz --hook || true" &&
+yarn husky add .husky/pre-commit "yarn lint-staged"
+
+yarn add -D prettier eslint-config-prettier eslint-plugin-prettier eslint-import-resolver-typescript eslint-plugin-import-helpers &&
+
+echo -e "import '@/styles/globals.css'
+import nProgress from 'nprogress'
+import type { AppProps } from 'next/app'
+import { useRouter } from 'react'
+
+export default function MyApp({ Component, pageProps }: AppProps) {
+  const router = useRouter()
+
+  useEffect(() => {
+    const handleStart = () => {
+      nProgress.start()
+    }
+
+    const handleStop = () => {
+      nProgress.done()
+    }
+
+    router.events.on('routeChangeStart', handleStart)
+    router.events.on('routeChangeComplete', handleStop)
+    router.events.on('routeChangeError', handleStop)
+
+    return () => {
+      router.events.off('routeChangeStart', handleStart)
+      router.events.off('routeChangeComplete', handleStop)
+      router.events.off('routeChangeError', handleStop)
+    }
+  }, [router])
+
+  return <Component {...pageProps} />
+}
+" > src/pages/app.tsx
+
+echo -e "export default function HomePage() {
+    return <h1>HomePage</h1>
+}
+" > src/pages/index.tsx
+
+echo -e "import { Html, Head, Main, NextScript } from 'next/document'
+
+export default function Document() {
+  return (
+    <Html lang=\"pt-br\">
+      <Head />
+      <body>
+        <Main />
+        <NextScript />
+      </body>
+    </Html>
+  )
+}
+" > src/pages/document.tsx
+
+
+echo -e "{
+  \"extends\": [\"next/core-web-vitals\", \"plugin:prettier/recommended\"],
+  \"plugins\": [\"prettier\", \"eslint-plugin-import-helpers\"],
+  \"rules\": {
+    \"prettier/prettier\": \"error\",
+    \"import-helpers/order-imports\": [
+      \"warn\",
+      {
+        \"newlinesBetween\": \"always\",
+        \"groups\": [\"module\", \"/^~/\", [\"parent\", \"sibling\", \"index\"]],
+        \"alphabetize\": { \"order\": \"asc\", \"ignoreCase\": true }
+      }
+    ]
+  },
+  \"settings\": {
+    \"import/resolver\": {
+      \"typescript\": {}
+    }
+  }
+}
+" > .eslintrc
+
+echo -e "{
+  \"printWidth\": 80,
+  \"tabWidth\": 2,
+  \"singleQuote\": true,
+  \"trailingComma\": \"es5\",
+  \"bracketSpacing\": true,
+  \"semi\": false
+}
+" > .prettierrc
+
+echo -e "#nprogress {
+  pointer-events: none;
+}
+
+#nprogress .bar {
+  background: #29d;
+
+  position: fixed;
+  z-index: 1031;
+  top: 0;
+  left: 0;
+
+  width: 100%;
+  height: 2px;
+}
+
+/* Fancy blur effect */
+#nprogress .peg {
+  display: block;
+  position: absolute;
+  right: 0px;
+  width: 100px;
+  height: 100%;
+  box-shadow: 0 0 10px #29d, 0 0 5px #29d;
+  opacity: 1;
+
+  -webkit-transform: rotate(3deg) translate(0px, -4px);
+  -ms-transform: rotate(3deg) translate(0px, -4px);
+  transform: rotate(3deg) translate(0px, -4px);
+}
+
+/* Remove these to get rid of the spinner */
+#nprogress .spinner {
+  display: block;
+  position: fixed;
+  z-index: 1031;
+  top: 15px;
+  right: 15px;
+}
+
+#nprogress .spinner-icon {
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+
+  border: solid 2px transparent;
+  border-top-color: #29d;
+  border-left-color: #29d;
+  border-radius: 50%;
+
+  -webkit-animation: nprogress-spinner 400ms linear infinite;
+  animation: nprogress-spinner 400ms linear infinite;
+}
+
+.nprogress-custom-parent {
+  overflow: hidden;
+  position: relative;
+}
+
+.nprogress-custom-parent #nprogress .spinner,
+.nprogress-custom-parent #nprogress .bar {
+  position: absolute;
+}
+
+@-webkit-keyframes nprogress-spinner {
+  0% {
+    -webkit-transform: rotate(0deg);
+  }
+  100% {
+    -webkit-transform: rotate(360deg);
+  }
+}
+@keyframes nprogress-spinner {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+" > src/styles/nprogress.css
+
+echo -e "@tailwind base;
+@tailwind components;
+@tailwind utilities;
+@import \"nprogress.css\"" > src/styles/globals.css
+
+echo -e " Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+.pnpm-debug.log*
+
+# Diagnostic reports (https://nodejs.org/api/report.html)
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Directory for instrumented libs generated by jscoverage/JSCover
+lib-cov
+
+# Coverage directory used by tools like istanbul
+coverage
+*.lcov
+
+# nyc test coverage
+.nyc_output
+
+# Grunt intermediate storage (https://gruntjs.com/creating-plugins#storing-task-files)
+.grunt
+
+# Bower dependency directory (https://bower.io/)
+bower_components
+
+# node-waf configuration
+.lock-wscript
+
+# Compiled binary addons (https://nodejs.org/api/addons.html)
+build/Release
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Snowpack dependency directory (https://snowpack.dev/)
+web_modules/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional stylelint cache
+.stylelintcache
+
+# Microbundle cache
+.rpt2_cache/
+.rts2_cache_cjs/
+.rts2_cache_es/
+.rts2_cache_umd/
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variable files
+.env
+.env.development.local
+.env.test.local
+.env.production.local
+.env.local
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# Next.js build output
+.next
+out
+
+# Nuxt.js build / generate output
+.nuxt
+dist
+
+# Gatsby files
+.cache/
+# Comment in the public line in if your project uses Gatsby and not Next.js
+# https://nextjs.org/blog/next-9-1#public-directory-support
+# public
+
+# vuepress build output
+.vuepress/dist
+
+# vuepress v2.x temp and cache directory
+.temp
+.cache
+
+# Docusaurus cache and generated files
+.docusaurus
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Stores VSCode versions used for testing VSCode extensions
+.vscode-test
+
+# yarn v2
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+.pnp.*
+" > .gitignore
